@@ -1,0 +1,18 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 建议统一用这个作为全局主题 -->
+    <style name="Theme.Cgmdemo" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- 以下几项你可以沿用模板自己的颜色，也可以暂时先这样 -->
+        <item name="colorPrimary">@android:color/holo_blue_light</item>
+        <item name="colorPrimaryVariant">@android:color/holo_blue_dark</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorSecondary">@android:color/holo_green_light</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+
+        <!-- 状态栏颜色（可选） -->
+        <item name="android:statusBarColor"
+            tools:targetApi="l">@android:color/holo_blue_dark</item>
+    </style>
+
+</resources>
+
