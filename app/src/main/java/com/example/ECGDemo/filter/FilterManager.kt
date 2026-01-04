@@ -1,4 +1,4 @@
-package com.example.cgmdemo.filter
+package com.example.ECGDemo.filter
 
 /**
  * 对外只暴露一个 FilterManager，内部根据配置选择不同的滤波器

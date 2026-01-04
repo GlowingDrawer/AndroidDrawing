@@ -1,4 +1,4 @@
-package com.example.cgmdemo.data
+package com.example.ECGDemo.data
 
 /**
  * 只关注葡萄糖和电压的单点记录

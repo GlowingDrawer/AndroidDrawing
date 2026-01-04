@@ -1,7 +1,7 @@
-package com.example.cgmdemo.data
+package com.example.ECGDemo.data
 
-import com.example.cgmdemo.filter.FilterManager
-import com.example.cgmdemo.filter.FilterType
+import com.example.ECGDemo.filter.FilterManager
+import com.example.ECGDemo.filter.FilterType
 import org.json.JSONObject
 import kotlin.math.max
 import kotlin.math.round

@@ -1,4 +1,4 @@
-package com.example.cgmdemo
+package com.example.ECGDemo
 
 import org.junit.Test
 

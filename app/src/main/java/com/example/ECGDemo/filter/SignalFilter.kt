@@ -1,4 +1,4 @@
-package com.example.cgmdemo.filter
+package com.example.ECGDemo.filter
 
 /**
  * 所有滤波器的统一接口

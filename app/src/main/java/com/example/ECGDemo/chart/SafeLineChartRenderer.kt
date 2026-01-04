@@ -1,4 +1,4 @@
-package com.example.cgmdemo.chart  // 如果你建在子包，比如 com.example.cgmdemo.chart 就改成对应包名
+package com.example.ECGDemo.chart  // 如果你建在子包，比如 com.example.cgmdemo.chart 就改成对应包名
 
 import android.graphics.Canvas
 import com.github.mikephil.charting.animation.ChartAnimator

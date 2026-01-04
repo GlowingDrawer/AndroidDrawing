@@ -1,4 +1,4 @@
-package com.example.cgmdemo.filter
+package com.example.ECGDemo.filter
 
 enum class FilterType {
     NONE,           // 不滤波

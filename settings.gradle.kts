@@ -9,18 +9,19 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
-        maven("https://jitpack.io")   // ⬅️ 一定要有这一行
+        maven("https://jitpack.io")
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        // ⬇⬇⬇ 这一行非常关键：JitPack 仓库
+        // ✅ 这一行非常关键，用于下载 MPAndroidChart
         maven(url = uri("https://jitpack.io"))
     }
 }
 
-rootProject.name = "cgmdemo"
+rootProject.name = "ECGDemo"
 include(":app")

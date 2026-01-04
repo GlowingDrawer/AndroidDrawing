@@ -1,4 +1,4 @@
-package com.example.cgmdemo.data
+package com.example.ECGDemo.data
 
 import org.json.JSONObject
 

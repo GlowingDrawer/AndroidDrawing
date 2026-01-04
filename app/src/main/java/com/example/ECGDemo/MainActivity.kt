@@ -1,9 +1,10 @@
-package com.example.cgmdemo
+package com.example.ECGDemo
 
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.content.Intent // [新增] 用于跳转 Activity
 import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.os.Build
@@ -14,12 +15,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.example.cgmdemo.bt.BluetoothSerialManager
-import com.example.cgmdemo.chart.SafeLineChartRenderer
-import com.example.cgmdemo.data.GlucoseMonitor
-import com.example.cgmdemo.data.JsonFrameDecoder
-import com.example.cgmdemo.filter.FilterManager
-import com.example.cgmdemo.filter.FilterType
+import android.widget.ArrayAdapter // [新增]
+import android.widget.Spinner // [新增]
+import com.example.ECGDemo.bt.BluetoothSerialManager
+import com.example.ECGDemo.chart.SafeLineChartRenderer
+import com.example.ECGDemo.data.GlucoseMonitor
+import com.example.ECGDemo.data.JsonFrameDecoder
+import com.example.ECGDemo.filter.FilterManager
+import com.example.ECGDemo.filter.FilterType
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.Description
 import com.github.mikephil.charting.data.Entry
@@ -45,8 +48,13 @@ class MainActivity : AppCompatActivity() {
     // ---------- UI ----------
     private lateinit var tvStatus: TextView
     private lateinit var spDevices: Spinner
+
+    private lateinit var spMode: Spinner
     private lateinit var btnRefreshDevices: Button
     private lateinit var btnConnect: Button
+
+    // [新增] 跳转到心电模式的按钮
+    private lateinit var btnGoToHeart: Button
 
     private lateinit var btnStart: Button
     private lateinit var btnPause: Button
@@ -77,6 +85,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         bindViews()
+        initModeSpinner()
         initChart()
         initEvents()
 
@@ -159,6 +168,7 @@ class MainActivity : AppCompatActivity() {
         spDevices = findViewById(R.id.spDevices)
         btnRefreshDevices = findViewById(R.id.btnRefreshDevices)
         btnConnect = findViewById(R.id.btnConnect)
+        spMode = findViewById(R.id.spMode)
 
         cbShowTime = findViewById(R.id.cbShowTime)
         cbHex = findViewById(R.id.cbHex)
@@ -170,16 +180,6 @@ class MainActivity : AppCompatActivity() {
         btnTabReceive = findViewById(R.id.btnTabReceive)
         btnTabChart = findViewById(R.id.btnTabChart)
 
-        receivePanel = findViewById(R.id.layoutReceivePanel)
-        chartPanel = findViewById(R.id.layoutChartPanel)
-
-        scrollReceive = findViewById(R.id.scrollReceive)
-        tvReceive = findViewById(R.id.tvReceive)
-        btnClearReceive = findViewById(R.id.btnClearReceive)
-        btnSaveCsv = findViewById(R.id.btnSaveCsv)
-
-        chartVoltGlucose = findViewById(R.id.chartVoltGlucose)
-        tableData = findViewById(R.id.tableData)
     }
 
     // ----------------------------------------------------------------
@@ -219,6 +219,53 @@ class MainActivity : AppCompatActivity() {
 
         btnTabReceive.setOnClickListener { showReceivePage() }
         btnTabChart.setOnClickListener { showChartPage() }
+
+        // [关键修改] 点击“连接”按钮时的逻辑分支
+        btnConnect.setOnClickListener {
+
+            // 1. 获取当前设备
+            val dev = currentDevice
+            if (dev == null) {
+                Toast.makeText(this, "请选择蓝牙设备", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // 2. 获取用户选择的模式 (0: 血糖, 1: ECG)
+            val selectedMode = spMode.selectedItemPosition
+
+            if (selectedMode == 0) {
+                // ==============================
+                // 模式 A: 血糖监测 (保持原有逻辑)
+                // ==============================
+                toggleConnect()
+
+            } else {
+                // ==============================
+                // 模式 B: ECG/心音 (跳转到新页面)
+                // ==============================
+
+                // 为了避免两个页面抢夺蓝牙，如果当前在这里已经连上了，先断开
+                if (btManager.isConnected) {
+                    btManager.disconnect()
+                    Toast.makeText(this, "正在切换到 ECG 模式...", Toast.LENGTH_SHORT).show()
+                }
+
+                // 跳转到 HeartMonitorActivity，把设备地址传过去
+                val intent = Intent(this, HeartMonitorActivity::class.java)
+                intent.putExtra("DEVICE_ADDRESS", dev.address)
+                startActivity(intent)
+            }
+        }
+    }
+
+    // [新增] 填充模式选择的内容
+    private fun initModeSpinner() {
+        // 定义两种模式
+        val modes = listOf("血糖监测模式", "ECG/心音模式")
+
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modes)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spMode.adapter = adapter
     }
 
     // 发送控制命令给 STM32
@@ -519,7 +566,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ----------------------------------------------------------------
-    // 循环伏安图：按电压单调性分段，正扫/回扫分色
+    // 循环伏安图
     // ----------------------------------------------------------------
     private fun updateVoltGlucoseChart() {
         val raw = monitor.voltageGlucoseData.toList()
@@ -558,12 +605,12 @@ class MainActivity : AppCompatActivity() {
         val allCurrent = mutableListOf<Float>()
 
         val colors = intArrayOf(
-            0xFFE53935.toInt(), // 红
-            0xFF1E88E5.toInt(), // 蓝
-            0xFF43A047.toInt(), // 绿
-            0xFFFDD835.toInt(), // 黄
-            0xFF8E24AA.toInt(), // 紫
-            0xFF00897B.toInt()  // 青
+            0xFFE53935.toInt(),
+            0xFF1E88E5.toInt(),
+            0xFF43A047.toInt(),
+            0xFFFDD835.toInt(),
+            0xFF8E24AA.toInt(),
+            0xFF00897B.toInt()
         )
 
         segments.forEachIndexed { index, seg ->
@@ -579,11 +626,7 @@ class MainActivity : AppCompatActivity() {
                 Entry(vf, cf)
             }
 
-            val label = if (index % 2 == 0) {
-                "正扫 ${index / 2 + 1}"
-            } else {
-                "回扫 ${index / 2 + 1}"
-            }
+            val label = if (index % 2 == 0) "正扫 ${index / 2 + 1}" else "回扫 ${index / 2 + 1}"
 
             val set = LineDataSet(entries, label).apply {
                 color = colors[index % colors.size]
@@ -640,9 +683,6 @@ class MainActivity : AppCompatActivity() {
         chartVoltGlucose.axisLeft.axisMaximum = maxI + margin
     }
 
-    /**
-     * 按电压单调性切成若干段：正扫 / 回扫
-     */
     private fun buildMonotonicSegments(
         data: List<Pair<Double, Double>>,
         dvThreshold: Double = 1e-4,
@@ -687,7 +727,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ----------------------------------------------------------------
-    // 数据表格：显示最近若干条 (时间, 电压, 电流)
+    // 数据表格
     // ----------------------------------------------------------------
     private fun updateDataTable(maxRows: Int = 20) {
         val records = monitor.records

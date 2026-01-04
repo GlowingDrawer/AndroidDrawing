@@ -1,4 +1,4 @@
-package com.example.cgmdemo.bt
+package com.example.ECGDemo.bt
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
