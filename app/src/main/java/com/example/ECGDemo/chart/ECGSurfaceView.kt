@@ -1,4 +1,4 @@
-package com.example.ECGDemo.chart  // <--- 包名已修改
+package com.example.ECGDemo.chart
 
 import android.content.Context
 import android.graphics.Canvas
@@ -11,6 +11,10 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import java.util.concurrent.ConcurrentLinkedQueue
 
+/**
+ * 专用于绘制高频心电/心音波形的 SurfaceView
+ * 固定量程版：Y轴范围固定为 -20000 ~ +20000
+ */
 class ECGSurfaceView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : SurfaceView(context, attrs), SurfaceHolder.Callback, Runnable {
@@ -31,13 +35,27 @@ class ECGSurfaceView @JvmOverloads constructor(
         strokeWidth = 1f
     }
 
+    private val zeroLinePaint = Paint().apply {
+        color = Color.GRAY
+        strokeWidth = 2f
+    }
+
+    private val textPaint = Paint().apply {
+        color = Color.LTGRAY
+        textSize = 24f
+        isAntiAlias = true
+    }
+
     // 缓冲区大小
-    private val bufferSize = 2000
+    private val bufferSize = 3000
     private val dataBuffer = FloatArray(bufferSize)
     private var writeIndex = 0
 
-    // 接收队列
     private val incomingQueue = ConcurrentLinkedQueue<Float>()
+
+    // 设定固定跨度
+    // 范围 -20000 到 +20000，总跨度为 40000
+    private val fixedSpan = 40000f
 
     init {
         holderRef.addCallback(this)
@@ -54,7 +72,7 @@ class ECGSurfaceView @JvmOverloads constructor(
         renderThread = Thread(this).apply { start() }
     }
 
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, w: Int, h: Int) {}
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         isRunning = false
@@ -83,59 +101,54 @@ class ECGSurfaceView @JvmOverloads constructor(
                     holderRef.unlockCanvasAndPost(canvas)
                 }
             }
+
             try { Thread.sleep(16) } catch (e: Exception) {}
         }
     }
 
     private fun drawFrame(canvas: Canvas) {
-        // 1. 清屏
         canvas.drawColor(Color.BLACK, PorterDuff.Mode.SRC)
 
         val width = width.toFloat()
         val height = height.toFloat()
         val centerY = height / 2f
 
-        // 2. 绘制中心参考线
-        canvas.drawLine(0f, centerY, width, centerY, gridPaint)
+        // 绘制零线
+        canvas.drawLine(0f, centerY, width, centerY, zeroLinePaint)
+
+        // 绘制辅助参考线 (可选)
+        // 例如在 +10000 和 -10000 处画淡灰色的线
+        // 计算缩放比例：保留一点点边距 (0.95)，让 20000 稍微离边缘有一点距离
+        // 如果想让 20000 绝对顶格，把 0.95f 改成 1.0f
+        val scaleY = (height * 0.95f) / fixedSpan
+
+        // 辅助线位置计算
+        val yTop = centerY - (10000f * scaleY)
+        val yBottom = centerY - (-10000f * scaleY)
+        canvas.drawLine(0f, yTop, width, yTop, gridPaint)
+        canvas.drawLine(0f, yBottom, width, yBottom, gridPaint)
 
         // -----------------------------------------------------------
-        // 针对 -50000 ~ +50000 的滚动显示适配
+        // 绘制波形 (固定比例)
         // -----------------------------------------------------------
-
-        val dataSpan = 100000f // 数据跨度
-        val scaleY = (height * 0.9f) / dataSpan // 缩放比例
-        val baseValue = 0f // 基准值
-
         val stepX = width / bufferSize
-
-        // --- 核心修改：滚动逻辑 ---
-        // writeIndex 当前指向的是“最老”的数据（即下一个要被覆盖的位置）
-        // 所以我们从 writeIndex 开始读取，就是按时间顺序从 旧 -> 新 读取
-
-        // startPos: 缓冲区中“最老”数据的索引
         val startPos = writeIndex
 
-        // 我们需要绘制 bufferSize - 1 段线条
         for (i in 0 until bufferSize - 1) {
-
-            // 计算当前点在循环缓冲区中的真实索引
             val idx1 = (startPos + i) % bufferSize
             val idx2 = (startPos + i + 1) % bufferSize
 
-            // 计算屏幕上的 X 坐标
-            // i=0 时 x=0 (屏幕最左边，显示最老数据)
-            // i=max 时 x=width (屏幕最右边，显示最新数据)
             val x1 = i * stepX
             val x2 = (i + 1) * stepX
 
-            // 计算 Y 坐标 (保持之前的算法)
-            val y1 = centerY - ((dataBuffer[idx1] - baseValue) * scaleY)
-            val y2 = centerY - ((dataBuffer[idx2] - baseValue) * scaleY)
+            // Y坐标公式：屏幕中心 - (数值 * 固定缩放比例)
+            val y1 = centerY - (dataBuffer[idx1] * scaleY)
+            val y2 = centerY - (dataBuffer[idx2] * scaleY)
 
             canvas.drawLine(x1, y1, x2, y2, linePaint)
         }
 
-        // 滚动模式下通常不需要红色的扫描线，因为最右边就是最新的
-        // 如果你喜欢，可以在最右边画一个点或者小箭头提示最新位置
+        // 显示当前量程提示 (左上角)
+        canvas.drawText("Range: ±20000", 20f, 40f, textPaint)
     }
 }

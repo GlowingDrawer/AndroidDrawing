@@ -4,9 +4,9 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.content.Intent // [新增] 用于跳转 Activity
+import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Typeface
+import android.graphics.Typeface // [已修复] 补上了这个关键引用
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -15,8 +15,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import android.widget.ArrayAdapter // [新增]
-import android.widget.Spinner // [新增]
 import com.example.ECGDemo.bt.BluetoothSerialManager
 import com.example.ECGDemo.chart.SafeLineChartRenderer
 import com.example.ECGDemo.data.GlucoseMonitor
@@ -52,9 +50,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var spMode: Spinner
     private lateinit var btnRefreshDevices: Button
     private lateinit var btnConnect: Button
-
-    // [新增] 跳转到心电模式的按钮
-    private lateinit var btnGoToHeart: Button
 
     private lateinit var btnStart: Button
     private lateinit var btnPause: Button
@@ -180,6 +175,16 @@ class MainActivity : AppCompatActivity() {
         btnTabReceive = findViewById(R.id.btnTabReceive)
         btnTabChart = findViewById(R.id.btnTabChart)
 
+        receivePanel = findViewById(R.id.layoutReceivePanel)
+        chartPanel = findViewById(R.id.layoutChartPanel)
+
+        scrollReceive = findViewById(R.id.scrollReceive)
+        tvReceive = findViewById(R.id.tvReceive)
+        btnClearReceive = findViewById(R.id.btnClearReceive)
+        btnSaveCsv = findViewById(R.id.btnSaveCsv)
+
+        chartVoltGlucose = findViewById(R.id.chartVoltGlucose)
+        tableData = findViewById(R.id.tableData)
     }
 
     // ----------------------------------------------------------------
@@ -220,6 +225,7 @@ class MainActivity : AppCompatActivity() {
         btnTabReceive.setOnClickListener { showReceivePage() }
         btnTabChart.setOnClickListener { showChartPage() }
 
+        // [关键逻辑] 点击“连接”按钮时的模式判断
         // [关键修改] 点击“连接”按钮时的逻辑分支
         btnConnect.setOnClickListener {
 
@@ -230,29 +236,31 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // 2. 获取用户选择的模式 (0: 血糖, 1: ECG)
+            // 2. 获取用户选择的模式
+            // 0: 血糖
+            // 1: ECG (协议解析)
+            // 2: ECG (直接接收)
             val selectedMode = spMode.selectedItemPosition
 
             if (selectedMode == 0) {
-                // ==============================
-                // 模式 A: 血糖监测 (保持原有逻辑)
-                // ==============================
+                // --- 模式 A: 血糖监测 ---
                 toggleConnect()
 
             } else {
-                // ==============================
-                // 模式 B: ECG/心音 (跳转到新页面)
-                // ==============================
+                // --- 模式 B: ECG/心音 (跳转到新 Activity) ---
 
-                // 为了避免两个页面抢夺蓝牙，如果当前在这里已经连上了，先断开
                 if (btManager.isConnected) {
                     btManager.disconnect()
                     Toast.makeText(this, "正在切换到 ECG 模式...", Toast.LENGTH_SHORT).show()
                 }
 
-                // 跳转到 HeartMonitorActivity，把设备地址传过去
                 val intent = Intent(this, HeartMonitorActivity::class.java)
                 intent.putExtra("DEVICE_ADDRESS", dev.address)
+
+                // [新增] 传递模式参数：如果是第 2 项 (index=2)，就是“直接接收”模式
+                val isRawMode = (selectedMode == 2)
+                intent.putExtra("IS_RAW_MODE", isRawMode)
+
                 startActivity(intent)
             }
         }
@@ -260,8 +268,12 @@ class MainActivity : AppCompatActivity() {
 
     // [新增] 填充模式选择的内容
     private fun initModeSpinner() {
-        // 定义两种模式
-        val modes = listOf("血糖监测模式", "ECG/心音模式")
+        // [修改] 增加第三个选项
+        val modes = listOf(
+            "血糖监测模式",
+            "ECG/心音 (协议解析)",
+            "ECG/心音 (直接接收)"
+        )
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modes)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -765,7 +777,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(8, 4, 8, 4)
             textSize = 12f
             if (bold) {
-                setTypeface(typeface, Typeface.BOLD)
+                setTypeface(null, if (bold) Typeface.BOLD else Typeface.NORMAL)
             }
         }
     }
