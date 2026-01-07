@@ -29,6 +29,16 @@
             android:label="ECG Monitor"
             android:parentActivityName="com.example.ECGDemo.MainActivity"/>
 
+        <activity
+            android:name=".BloodPressureActivity"
+            android:label="BP Monitor"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".VitalSignsActivity"
+            android:label="Vital Signs"
+            android:screenOrientation="portrait" />
+
     </application>
 
 </manifest>

@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * 专用于绘制高频心电/心音波形的 SurfaceView
- * 固定量程版：Y轴范围固定为 -20000 ~ +20000
+ * 支持动态设置量程
  */
 class ECGSurfaceView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
@@ -53,14 +53,23 @@ class ECGSurfaceView @JvmOverloads constructor(
 
     private val incomingQueue = ConcurrentLinkedQueue<Float>()
 
-    // 设定固定跨度
-    // 范围 -20000 到 +20000，总跨度为 40000
-    private val fixedSpan = 40000f
+    // [修改] 默认跨度 40000 (-20000 ~ +20000)
+    // 现在它是 var，可以被外部修改
+    private var currentSpan = 40000f
 
     init {
         holderRef.addCallback(this)
         setZOrderOnTop(true)
         holderRef.setFormat(PixelFormat.TRANSPARENT)
+    }
+
+    /**
+     * [新增] 设置显示范围跨度
+     * 例如：span=40000f 表示 ±20000
+     * span=100000f 表示 ±50000
+     */
+    fun setSpan(span: Float) {
+        this.currentSpan = span
     }
 
     fun addSample(value: Float) {
@@ -116,21 +125,17 @@ class ECGSurfaceView @JvmOverloads constructor(
         // 绘制零线
         canvas.drawLine(0f, centerY, width, centerY, zeroLinePaint)
 
-        // 绘制辅助参考线 (可选)
-        // 例如在 +10000 和 -10000 处画淡灰色的线
-        // 计算缩放比例：保留一点点边距 (0.95)，让 20000 稍微离边缘有一点距离
-        // 如果想让 20000 绝对顶格，把 0.95f 改成 1.0f
-        val scaleY = (height * 0.95f) / fixedSpan
+        // [修改] 使用 currentSpan 计算缩放比例
+        // 保留一点边距 (0.95f)
+        val scaleY = (height * 0.95f) / currentSpan
 
-        // 辅助线位置计算
-        val yTop = centerY - (10000f * scaleY)
-        val yBottom = centerY - (-10000f * scaleY)
+        // 绘制辅助线 (可选，这里以 ±1/4 量程为例)
+        val quarterSpan = currentSpan / 4f
+        val yTop = centerY - (quarterSpan * scaleY)
+        val yBottom = centerY - (-quarterSpan * scaleY)
         canvas.drawLine(0f, yTop, width, yTop, gridPaint)
         canvas.drawLine(0f, yBottom, width, yBottom, gridPaint)
 
-        // -----------------------------------------------------------
-        // 绘制波形 (固定比例)
-        // -----------------------------------------------------------
         val stepX = width / bufferSize
         val startPos = writeIndex
 
@@ -141,14 +146,14 @@ class ECGSurfaceView @JvmOverloads constructor(
             val x1 = i * stepX
             val x2 = (i + 1) * stepX
 
-            // Y坐标公式：屏幕中心 - (数值 * 固定缩放比例)
             val y1 = centerY - (dataBuffer[idx1] * scaleY)
             val y2 = centerY - (dataBuffer[idx2] * scaleY)
 
             canvas.drawLine(x1, y1, x2, y2, linePaint)
         }
 
-        // 显示当前量程提示 (左上角)
-        canvas.drawText("Range: ±20000", 20f, 40f, textPaint)
+        // 显示当前量程
+        val rangeVal = (currentSpan / 2).toInt()
+        canvas.drawText("Range: ±$rangeVal", 20f, 40f, textPaint)
     }
 }

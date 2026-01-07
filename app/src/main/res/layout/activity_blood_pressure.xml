@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="返回" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="血压数据分析"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#333333"/>
+
+        <View
+            android:layout_width="80dp"
+            android:layout_height="1dp" />
+    </LinearLayout>
+
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:rowCount="2"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="10dp"
+        android:background="#F5F5F5"
+        android:padding="10dp">
+
+        <TextView
+            android:text="平均收缩压 (SBP):"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_margin="5dp"
+            android:layout_gravity="center_vertical"/> <TextView
+        android:id="@+id/tvAvgSbp"
+        android:text="-- mmHg"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#E53935"
+        android:layout_margin="5dp"
+        android:layout_gravity="center_vertical"/>
+
+        <TextView
+            android:id="@+id/tvSbpStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/bg_status_tag"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"/>
+
+        <TextView
+            android:text="平均舒张压 (DBP):"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_margin="5dp"
+            android:layout_gravity="center_vertical"/>
+
+        <TextView
+            android:id="@+id/tvAvgDbp"
+            android:text="-- mmHg"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#1E88E5"
+            android:layout_margin="5dp"
+            android:layout_gravity="center_vertical"/>
+
+        <TextView
+            android:id="@+id/tvDbpStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/bg_status_tag"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"/>
+    </GridLayout>
+
+    <TextView
+        android:id="@+id/tvCountInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:text="样本数: 0"
+        android:textSize="12sp"
+        android:textColor="#999999"
+        android:layout_marginBottom="10dp"/>
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/chartBP"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+</LinearLayout>

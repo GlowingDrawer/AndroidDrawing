@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var cbShowTime: CheckBox
     private lateinit var cbHex: CheckBox
+    private lateinit var cbAutoScroll: CheckBox // [新增]
     private lateinit var tvReceive: TextView
     private lateinit var btnClearReceive: Button
     private lateinit var btnSaveCsv: Button
@@ -167,6 +168,7 @@ class MainActivity : AppCompatActivity() {
 
         cbShowTime = findViewById(R.id.cbShowTime)
         cbHex = findViewById(R.id.cbHex)
+        cbAutoScroll = findViewById(R.id.cbAutoScroll) // [新增]
 
         btnStart = findViewById(R.id.btnStart)
         btnPause = findViewById(R.id.btnPause)
@@ -228,40 +230,41 @@ class MainActivity : AppCompatActivity() {
         // [关键逻辑] 点击“连接”按钮时的模式判断
         // [关键修改] 点击“连接”按钮时的逻辑分支
         btnConnect.setOnClickListener {
-
-            // 1. 获取当前设备
             val dev = currentDevice
             if (dev == null) {
                 Toast.makeText(this, "请选择蓝牙设备", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            // 2. 获取用户选择的模式
-            // 0: 血糖
-            // 1: ECG (协议解析)
-            // 2: ECG (直接接收)
             val selectedMode = spMode.selectedItemPosition
 
             if (selectedMode == 0) {
-                // --- 模式 A: 血糖监测 ---
+                // 模式 0: 血糖
                 toggleConnect()
-
             } else {
-                // --- 模式 B: ECG/心音 (跳转到新 Activity) ---
-
+                // 其他模式都需要跳转，先断开当前连接
                 if (btManager.isConnected) {
                     btManager.disconnect()
-                    Toast.makeText(this, "正在切换到 ECG 模式...", Toast.LENGTH_SHORT).show()
                 }
 
-                val intent = Intent(this, HeartMonitorActivity::class.java)
-                intent.putExtra("DEVICE_ADDRESS", dev.address)
-
-                // [新增] 传递模式参数：如果是第 2 项 (index=2)，就是“直接接收”模式
-                val isRawMode = (selectedMode == 2)
-                intent.putExtra("IS_RAW_MODE", isRawMode)
-
-                startActivity(intent)
+                // 模式判断逻辑更新：
+                if (selectedMode == 4) {
+                    // === [新增] 模式 4: 心率与呼吸 ===
+                    val intent = Intent(this, VitalSignsActivity::class.java)
+                    startActivity(intent)
+                } else if (selectedMode == 3) {
+                    // === [新增] 模式 3: 血压监测 ===
+                    val intent = Intent(this, BloodPressureActivity::class.java)
+                    intent.putExtra("DEVICE_ADDRESS", dev.address)
+                    startActivity(intent)
+                } else {
+                    // 模式 1 & 2: ECG/心音
+                    val intent = Intent(this, HeartMonitorActivity::class.java)
+                    intent.putExtra("DEVICE_ADDRESS", dev.address)
+                    // 模式 2 是直接接收 (true)，模式 1 是协议解析 (false)
+                    intent.putExtra("IS_RAW_MODE", (selectedMode == 2))
+                    startActivity(intent)
+                }
             }
         }
     }
@@ -271,8 +274,10 @@ class MainActivity : AppCompatActivity() {
         // [修改] 增加第三个选项
         val modes = listOf(
             "血糖监测模式",
-            "ECG/心音 (协议解析)",
-            "ECG/心音 (直接接收)"
+            "ECG/心电 (协议解析)",
+            "ECG/心音 (直接接收)",
+            "双通道血压监测 (SBP/DBP)", // 新增
+            "心率与呼吸监测" // [新增] 第 5 个选项
         )
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modes)
@@ -549,7 +554,9 @@ class MainActivity : AppCompatActivity() {
         tvReceive.append("\n")
         trimReceiveText()
 
-        scrollReceive.post { scrollReceive.fullScroll(View.FOCUS_DOWN) }
+        if (cbAutoScroll.isChecked) {
+            scrollReceive.post { scrollReceive.fullScroll(View.FOCUS_DOWN) }
+        }
 
         if (!cbHex.isChecked && textPart.isNotEmpty()) {
             jsonDecoder.feed(textPart) { obj ->
